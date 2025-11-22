@@ -3,9 +3,6 @@ from django.db import models
 
 
 class User(AbstractUser):
-    """
-    Custom User model with role-based access control for Procure-to-Pay system
-    """
     
     class Role(models.TextChoices):
         STAFF = 'staff', 'Staff'
@@ -34,7 +31,6 @@ class User(AbstractUser):
         help_text="Unique employee identifier"
     )
     
-    # Manager relationships for approval hierarchy
     manager = models.ForeignKey(
         'self',
         on_delete=models.SET_NULL,
@@ -62,7 +58,6 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
 
-    # Property methods for easy role checking
     @property
     def is_staff_role(self):
         return self.role == self.Role.STAFF
@@ -81,11 +76,9 @@ class User(AbstractUser):
     
     @property
     def is_approver(self):
-        """Check if user has any approval permissions"""
         return self.role in [self.Role.APPROVER_LEVEL_1, self.Role.APPROVER_LEVEL_2]
     
     def get_approval_level(self):
-        """Get numeric approval level for workflow logic"""
         approval_levels = {
             self.Role.APPROVER_LEVEL_1: 1,
             self.Role.APPROVER_LEVEL_2: 2,
@@ -94,9 +87,6 @@ class User(AbstractUser):
 
 
 class UserProfile(models.Model):
-    """
-    Extended profile information for users
-    """
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
