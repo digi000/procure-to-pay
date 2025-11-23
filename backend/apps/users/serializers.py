@@ -33,7 +33,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'username', 'email', 'password', 'password_confirm',
-            'first_name', 'last_name', 'role', 'department', 'employee_id'
+            'first_name', 'last_name', 'role', 'department', 'employee_id', 'manager'
         ]
         extra_kwargs = {
             'role': {'required': True}
@@ -48,6 +48,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 "role": f"Only {User.Role.STAFF.label} role can be set during registration."
             })
+        
+        # Require manager for staff role
+        if attrs.get('role') == User.Role.STAFF and not attrs.get('manager'):
+            raise serializers.ValidationError({
+                "manager": "Manager is required for staff role."
+            })
             
         return attrs
     
@@ -60,7 +66,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             last_name=validated_data.get('last_name', ''),
             role=validated_data.get('role', User.Role.STAFF),
             department=validated_data.get('department', ''),
-            employee_id=validated_data.get('employee_id', '')
+            employee_id=validated_data.get('employee_id', ''),
+            manager=validated_data.get('manager')
         )
         
         UserProfile.objects.create(user=user)
