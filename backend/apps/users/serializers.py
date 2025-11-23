@@ -38,18 +38,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'role': {'required': True}
         }
-    
+ 
     def validate(self, attrs):
         if attrs['password'] != attrs.pop('password_confirm'):
             raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
         
-        allowed_roles = [User.Role.STAFF]
-        if attrs.get('role') not in allowed_roles:
-            raise serializers.ValidationError({
-                "role": f"Only {User.Role.STAFF.label} role can be set during registration."
-            })
-        
-        # Require manager for staff role
+        # Require manager for staff role only
         if attrs.get('role') == User.Role.STAFF and not attrs.get('manager'):
             raise serializers.ValidationError({
                 "manager": "Manager is required for staff role."
