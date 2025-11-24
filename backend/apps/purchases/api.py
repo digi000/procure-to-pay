@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
 from django.db.models import Count, Q
+import os
 from .models import PurchaseRequest, Approval
 from .serializers import (
     PurchaseRequestSerializer, 
@@ -43,6 +44,42 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
         if not self.request.user.is_staff_role:
             raise permissions.PermissionDenied("Only staff users can create purchase requests.")
         serializer.save()
+    
+    def update(self, request, *args, **kwargs):
+        purchase_request = self.get_object()
+        user = request.user
+        
+        if not user.is_staff_role or purchase_request.created_by != user:
+            return Response(
+                {"error": "Only the staff member who created this request can update it."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        if purchase_request.status != PurchaseRequest.Status.PENDING:
+            return Response(
+                {"error": "Cannot update request that has been approved or rejected."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        return super().update(request, *args, **kwargs)
+    
+    def partial_update(self, request, *args, **kwargs):
+        purchase_request = self.get_object()
+        user = request.user
+        
+        if not user.is_staff_role or purchase_request.created_by != user:
+            return Response(
+                {"error": "Only the staff member who created this request can update it."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        if purchase_request.status != PurchaseRequest.Status.PENDING:
+            return Response(
+                {"error": "Cannot update request that has been approved or rejected."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        return super().partial_update(request, *args, **kwargs)
     
     @action(detail=True, methods=['patch'], permission_classes=[IsApproverUser])
     def approve(self, request, pk=None):
@@ -100,9 +137,6 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'], permission_classes=[IsStaffUser])
     def submit_receipt(self, request, pk=None):
-        """
-        Submit receipt for a purchase request
-        """
         purchase_request = self.get_object()
         
         if purchase_request.created_by != request.user:
@@ -121,6 +155,21 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
         if not receipt_file:
             return Response(
                 {"error": "Receipt file is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']
+        file_extension = os.path.splitext(receipt_file.name)[1].lower()
+        if file_extension not in allowed_extensions:
+            return Response(
+                {"error": f"Invalid file type. Allowed types: {', '.join(allowed_extensions)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate file size (optional - 10MB limit)
+        if receipt_file.size > 10 * 1024 * 1024:
+            return Response(
+                {"error": "File size too large. Maximum size is 10MB."},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
