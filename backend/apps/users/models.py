@@ -84,6 +84,25 @@ class User(AbstractUser):
             self.Role.APPROVER_LEVEL_2: 2,
         }
         return approval_levels.get(self.role, 0)
+    
+    def can_approve_request(self, purchase_request):
+        """
+        Check if this user can approve a specific purchase request
+        """
+        if not self.is_approver:
+            return False
+
+        from apps.purchases.models import Approval  # Avoid circular import
+        existing_approval = Approval.objects.filter(
+            purchase_request=purchase_request,
+            approver=self
+        ).exists()
+
+        if existing_approval:
+            return False
+        
+        # Both approval levels can approve without restrictions
+        return True
 
 
 class UserProfile(models.Model):
