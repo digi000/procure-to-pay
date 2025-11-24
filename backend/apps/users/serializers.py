@@ -43,7 +43,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         if attrs['password'] != attrs.pop('password_confirm'):
             raise serializers.ValidationError({"password_confirm": "Passwords do not match."})
         
-        # Require manager for staff role only
         if attrs.get('role') == User.Role.STAFF and not attrs.get('manager'):
             raise serializers.ValidationError({
                 "manager": "Manager is required for staff role."
