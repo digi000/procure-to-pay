@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
+from django.db.models import Count, Q
 from .models import PurchaseRequest, Approval
 from .serializers import (
     PurchaseRequestSerializer, 
@@ -30,7 +31,11 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
             return PurchaseRequest.objects.all()
         
         elif user.is_finance:
-            return PurchaseRequest.objects.filter(status=PurchaseRequest.Status.APPROVED)
+            return PurchaseRequest.objects.filter(
+                status=PurchaseRequest.Status.APPROVED
+            ).annotate(
+                approval_count=Count('approvals', filter=Q(approvals__approved=True))
+            ).filter(approval_count=2)
         
         return PurchaseRequest.objects.none()
     
@@ -39,11 +44,11 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
             raise permissions.PermissionDenied("Only staff users can create purchase requests.")
         serializer.save()
     
-    @action(detail=True, methods=['post'], permission_classes=[IsApproverUser])
+    @action(detail=True, methods=['patch'], permission_classes=[IsApproverUser])
     def approve(self, request, pk=None):
         return self._handle_approval(request, pk, approved=True)
     
-    @action(detail=True, methods=['post'], permission_classes=[IsApproverUser])
+    @action(detail=True, methods=['patch'], permission_classes=[IsApproverUser])
     def reject(self, request, pk=None):
         return self._handle_approval(request, pk, approved=False)
     
@@ -73,12 +78,18 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
                 comments=request.data.get('comments', '')
             )
             
-            if approved:
-                purchase_request.status = PurchaseRequest.Status.APPROVED
-            else:
+            if not approved:
                 purchase_request.status = PurchaseRequest.Status.REJECTED
-            
-            purchase_request.save()
+                purchase_request.save()
+            else:
+                approved_count = Approval.objects.filter(
+                    purchase_request=purchase_request,
+                    approved=True
+                ).count()
+                
+                if approved_count == 2:
+                    purchase_request.status = PurchaseRequest.Status.APPROVED
+                    purchase_request.save()
         
         serializer = self.get_serializer(purchase_request)
         action = "approved" if approved else "rejected"
