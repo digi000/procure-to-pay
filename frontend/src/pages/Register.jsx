@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Mail, Lock, Building, BadgeInfo } from 'lucide-react';
+import { User, Mail, Lock, Building, BadgeInfo, Users } from 'lucide-react';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -14,7 +14,7 @@ const Register = () => {
     role: 'staff',
     department: '',
     employee_id: '',
-    manager_id: ''
+    manager: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -191,6 +191,27 @@ const Register = () => {
                 />
               </div>
             </div>
+
+            {formData.role === 'staff' && (
+              <div>
+                <label htmlFor="manager" className="block text-sm font-medium text-gray-700">
+                  Manager ID <span className="text-red-500">*</span>
+                </label>
+                <div className="mt-1 relative">
+                  <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    id="manager"
+                    name="manager"
+                    type="number"
+                    required
+                    value={formData.manager}
+                    onChange={handleChange}
+                    placeholder="Enter your manager's ID"
+                    className="block w-full pl-10 border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div>
