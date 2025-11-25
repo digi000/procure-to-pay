@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.db import transaction
 from django.db.models import Count, Q
 import os
+import json
 from .models import PurchaseRequest, Approval
 from .serializers import (
     PurchaseRequestSerializer, 
@@ -29,7 +30,10 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
             return PurchaseRequest.objects.filter(created_by=user)
         
         elif user.is_approver:
-            return PurchaseRequest.objects.all()
+            if user.is_approver_level_1:
+                return PurchaseRequest.objects.filter(created_by__manager=user)
+            else:
+                return PurchaseRequest.objects.all()
         
         elif user.is_finance:
             return PurchaseRequest.objects.filter(
@@ -127,13 +131,34 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
                 if approved_count == 2:
                     purchase_request.status = PurchaseRequest.Status.APPROVED
                     purchase_request.save()
+                    
+                    from .services import PurchaseOrderGenerator
+                    po, message = PurchaseOrderGenerator.generate_po(purchase_request.id)
+                    if po:
+                        po_info = {
+                            "po_generated": True,
+                            "po_number": po.po_number,
+                            "po_message": message
+                        }
+                    else:
+                        po_info = {
+                            "po_generated": False,
+                            "po_message": message
+                        }
+                else:
+                    po_info = None
         
         serializer = self.get_serializer(purchase_request)
         action = "approved" if approved else "rejected"
-        return Response({
+        response_data = {
             "message": f"Request {action} successfully",
             "request": serializer.data
-        })
+        }
+        
+        if po_info:
+            response_data.update(po_info)
+        
+        return Response(response_data)
     
     @action(detail=True, methods=['post'], permission_classes=[IsStaffUser])
     def submit_receipt(self, request, pk=None):
@@ -166,7 +191,6 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Validate file size (optional - 10MB limit)
         if receipt_file.size > 10 * 1024 * 1024:
             return Response(
                 {"error": "File size too large. Maximum size is 10MB."},
@@ -175,9 +199,47 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
         
         purchase_request.receipt = receipt_file
         purchase_request.save()
-        
+    
         serializer = self.get_serializer(purchase_request)
         return Response({
             "message": "Receipt submitted successfully",
             "request": serializer.data
         })
+    
+    @action(detail=True, methods=['get'])
+    def purchase_order(self, request, pk=None):
+        purchase_request = self.get_object()
+        
+        if not hasattr(purchase_request, 'purchase_order_doc'):
+            return Response(
+                {"error": "Purchase order not generated yet"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        from django.http import FileResponse
+        po = purchase_request.purchase_order_doc
+        
+        try:
+            pdf_file = po.po_document.open('rb')
+            response = FileResponse(pdf_file, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{po.po_document.name}"'
+            return response
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to retrieve PO document: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def po_data(self, request, pk=None):
+        purchase_request = self.get_object()
+        
+        from .services import PurchaseOrderGenerator
+        po_data = PurchaseOrderGenerator._extract_po_data(purchase_request)
+        
+        if hasattr(purchase_request, 'purchase_order_doc'):
+            po_data['po_number'] = purchase_request.purchase_order_doc.po_number
+        else:
+            po_data['po_number'] = "Pending Generation"
+        
+        return Response(po_data)
