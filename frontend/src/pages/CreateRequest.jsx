@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { purchaseAPI } from '../services/api';
-import { Upload, Plus, ArrowLeft } from 'lucide-react';
+import { Upload, Plus, ArrowLeft, FileText } from 'lucide-react';
 
 const CreateRequest = () => {
   const [formData, setFormData] = useState({
@@ -20,7 +20,11 @@ const CreateRequest = () => {
     project_code: '',
     requested_delivery_date: ''
   });
-  const [proformaFile, setProformaFile] = useState(null);
+  const [files, setFiles] = useState({
+    proforma: null,
+    quotation_comparison: null,
+    specification_sheet: null
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
@@ -35,7 +39,11 @@ const CreateRequest = () => {
   };
 
   const handleFileChange = (e) => {
-    setProformaFile(e.target.files[0]);
+    const { name, files: fileList } = e.target;
+    setFiles({
+      ...files,
+      [name]: fileList[0]
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -60,15 +68,31 @@ const CreateRequest = () => {
         }
       });
 
-      // Add proforma file if selected
-      if (proformaFile) {
-        submitData.append('proforma', proformaFile);
-      }
+      // Add files if selected
+      Object.keys(files).forEach(key => {
+        if (files[key]) {
+          submitData.append(key, files[key]);
+        }
+      });
 
       await purchaseAPI.createRequest(submitData);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create purchase request');
+      const errorData = err.response?.data;
+      if (errorData) {
+        if (errorData.detail) {
+          setError(errorData.detail);
+        } else if (typeof errorData === 'object') {
+          const errorMessages = Object.entries(errorData)
+            .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
+            .join('; ');
+          setError(errorMessages);
+        } else {
+          setError('Failed to create purchase request');
+        }
+      } else {
+        setError('Failed to create purchase request');
+      }
     } finally {
       setLoading(false);
     }
@@ -106,13 +130,13 @@ const CreateRequest = () => {
                 <div className="grid grid-cols-1 gap-6">
                   <div>
                     <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-                      Request Title *
+                      Request Title {!files.proforma && <span className="text-red-500">*</span>}
                     </label>
                     <input
                       type="text"
                       id="title"
                       name="title"
-                      required
+                      required={!files.proforma}
                       value={formData.title}
                       onChange={handleChange}
                       className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -138,13 +162,13 @@ const CreateRequest = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-                        Amount ($) *
+                        Amount ($) {!files.proforma && <span className="text-red-500">*</span>}
                       </label>
                       <input
                         type="number"
                         id="amount"
                         name="amount"
-                        required
+                        required={!files.proforma}
                         step="0.01"
                         min="0"
                         value={formData.amount}
@@ -181,13 +205,13 @@ const CreateRequest = () => {
                 <div className="grid grid-cols-1 gap-6">
                   <div>
                     <label htmlFor="vendor_name" className="block text-sm font-medium text-gray-700">
-                      Vendor Name *
+                      Vendor Name {!files.proforma && <span className="text-red-500">*</span>}
                     </label>
                     <input
                       type="text"
                       id="vendor_name"
                       name="vendor_name"
-                      required
+                      required={!files.proforma}
                       value={formData.vendor_name}
                       onChange={handleChange}
                       className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -219,6 +243,7 @@ const CreateRequest = () => {
                         type="date"
                         id="requested_delivery_date"
                         name="requested_delivery_date"
+                        min={new Date().toISOString().split('T')[0]}
                         value={formData.requested_delivery_date}
                         onChange={handleChange}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -249,12 +274,12 @@ const CreateRequest = () => {
                 <div className="grid grid-cols-1 gap-6">
                   <div>
                     <label htmlFor="business_justification" className="block text-sm font-medium text-gray-700">
-                      Business Justification *
+                      Business Justification {!files.proforma && <span className="text-red-500">*</span>}
                     </label>
                     <textarea
                       id="business_justification"
                       name="business_justification"
-                      required
+                      required={!files.proforma}
                       rows={4}
                       value={formData.business_justification}
                       onChange={handleChange}
@@ -323,42 +348,99 @@ const CreateRequest = () => {
                 </div>
               </div>
 
-              {/* Proforma Upload */}
+              {/* Document Uploads */}
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Document Upload</h3>
-                <div>
-                  <label htmlFor="proforma" className="block text-sm font-medium text-gray-700 mb-2">
-                    Proforma Invoice (Optional)
-                  </label>
-                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                    <div className="space-y-1 text-center">
-                      <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                      <div className="flex text-sm text-gray-600">
-                        <label
-                          htmlFor="proforma"
-                          className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none"
-                        >
-                          <span>Upload a file</span>
-                          <input
-                            id="proforma"
-                            name="proforma"
-                            type="file"
-                            className="sr-only"
-                            onChange={handleFileChange}
-                            accept=".pdf,.doc,.docx,.txt"
-                          />
-                        </label>
-                        <p className="pl-1">or drag and drop</p>
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Supporting Documents</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label htmlFor="proforma" className="block text-sm font-medium text-gray-700 mb-2">
+                      Proforma Invoice
+                    </label>
+                    <div className="flex items-center justify-center px-6 py-4 border-2 border-dashed border-gray-300 rounded-md">
+                      <div className="text-center">
+                        <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                        <div className="mt-2">
+                          <label htmlFor="proforma" className="cursor-pointer">
+                            <span className="text-sm text-blue-600 hover:text-blue-500">Upload file</span>
+                            <input
+                              id="proforma"
+                              name="proforma"
+                              type="file"
+                              onChange={handleFileChange}
+                              className="sr-only"
+                              accept=".pdf,.doc,.docx,.txt"
+                            />
+                          </label>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">PDF, Word, or Text</p>
                       </div>
-                      <p className="text-xs text-gray-500">
-                        PDF, DOC, DOCX, TXT up to 10MB
-                      </p>
-                      {proformaFile && (
-                        <p className="text-sm text-green-600">
-                          Selected: {proformaFile.name}
-                        </p>
-                      )}
                     </div>
+                    {files.proforma && (
+                      <p className="mt-2 text-sm text-green-600 flex items-center">
+                        <FileText className="h-4 w-4 mr-1" />
+                        {files.proforma.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="quotation_comparison" className="block text-sm font-medium text-gray-700 mb-2">
+                      Quotation Comparison
+                    </label>
+                    <div className="flex items-center justify-center px-6 py-4 border-2 border-dashed border-gray-300 rounded-md">
+                      <div className="text-center">
+                        <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                        <div className="mt-2">
+                          <label htmlFor="quotation_comparison" className="cursor-pointer">
+                            <span className="text-sm text-blue-600 hover:text-blue-500">Upload file</span>
+                            <input
+                              id="quotation_comparison"
+                              name="quotation_comparison"
+                              type="file"
+                              onChange={handleFileChange}
+                              className="sr-only"
+                              accept=".pdf,.doc,.docx,.txt"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    {files.quotation_comparison && (
+                      <p className="mt-2 text-sm text-green-600 flex items-center">
+                        <FileText className="h-4 w-4 mr-1" />
+                        {files.quotation_comparison.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label htmlFor="specification_sheet" className="block text-sm font-medium text-gray-700 mb-2">
+                      Specification Sheet
+                    </label>
+                    <div className="flex items-center justify-center px-6 py-4 border-2 border-dashed border-gray-300 rounded-md">
+                      <div className="text-center">
+                        <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                        <div className="mt-2">
+                          <label htmlFor="specification_sheet" className="cursor-pointer">
+                            <span className="text-sm text-blue-600 hover:text-blue-500">Upload file</span>
+                            <input
+                              id="specification_sheet"
+                              name="specification_sheet"
+                              type="file"
+                              onChange={handleFileChange}
+                              className="sr-only"
+                              accept=".pdf,.doc,.docx,.txt"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    {files.specification_sheet && (
+                      <p className="mt-2 text-sm text-green-600 flex items-center">
+                        <FileText className="h-4 w-4 mr-1" />
+                        {files.specification_sheet.name}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
