@@ -190,13 +190,12 @@ SIMPLE_JWT = {
     'USER_ID_CLAIM': 'user_id',
 }
 
-"""
- CORS settings (for frontend integration)
+# CORS settings
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React dev server
+    "http://localhost:3000", 
     "http://127.0.0.1:3000",
+ #   "https://9ade9bdb0950.ngrok-free.app", for testing
 ]
-"""
 
 CORS_ALLOW_CREDENTIALS = True
 
