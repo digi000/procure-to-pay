@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Layout from './components/Layout';
+import CreateRequest from './pages/CreateRequest';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -44,6 +45,13 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Dashboard />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/create-request" element={
+            <ProtectedRoute>
+              <Layout>
+                <CreateRequest />
               </Layout>
             </ProtectedRoute>
           } />
