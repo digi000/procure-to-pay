@@ -91,13 +91,13 @@ class ReceiptValidator:
     
     def _extract_with_ai(self, text: str) -> Dict:
         try:
-            import openai
+            from openai import OpenAI
             from django.conf import settings
             
-            if not hasattr(settings, 'OPENAI_API_KEY'):
+            if not hasattr(settings, 'OPENAI_API_KEY') or not settings.OPENAI_API_KEY:
                 return {"error": "OpenAI not configured"}
             
-            openai.api_key = settings.OPENAI_API_KEY
+            client = OpenAI(api_key=settings.OPENAI_API_KEY)
             
             prompt = f"""
             Extract receipt information from this text:
@@ -113,7 +113,7 @@ class ReceiptValidator:
             If any field cannot be found, use null.
             """
             
-            response = openai.ChatCompletion.create(
+            response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a receipt data extraction assistant. Extract structured data from receipts."},
