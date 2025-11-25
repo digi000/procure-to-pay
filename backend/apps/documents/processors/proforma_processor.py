@@ -3,16 +3,15 @@ import docx
 import re
 import json
 from typing import Dict, List, Optional
-import openai
+from openai import OpenAI
 from django.conf import settings
 
 
 class ProformaProcessor:
     def __init__(self):
         self.openai_client = None
-        if hasattr(settings, 'OPENAI_API_KEY'):
-            openai.api_key = settings.OPENAI_API_KEY
-            self.openai_client = openai
+        if hasattr(settings, 'OPENAI_API_KEY') and settings.OPENAI_API_KEY:
+            self.openai_client = OpenAI(api_key=settings.OPENAI_API_KEY)
     
     def extract_data(self, file_path: str) -> Dict:
         try:
@@ -93,7 +92,7 @@ class ProformaProcessor:
             If any field cannot be found, use null.
             """
             
-            response = self.openai_client.ChatCompletion.create(
+            response = self.openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": "You are a procurement data extraction assistant. Extract structured data from proforma invoices."},
