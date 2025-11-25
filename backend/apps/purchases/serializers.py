@@ -55,6 +55,12 @@ class PurchaseRequestCreateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         proforma = attrs.get('proforma')
+        has_manual_data = bool(attrs.get('title') and attrs.get('amount') and attrs.get('vendor_name'))
+        
+        if not proforma and not has_manual_data:
+            raise serializers.ValidationError(
+                "Either provide a proforma document OR manually enter title, amount, vendor_name, and business_justification."
+            )
         
         if not proforma:
             if not attrs.get('title'):
@@ -83,11 +89,39 @@ class PurchaseRequestCreateSerializer(serializers.ModelSerializer):
         proforma_file = validated_data.pop('proforma', None)
         validated_data['created_by'] = self.context['request'].user
         
+        missing_fields = []
+        
         if proforma_file:
             extracted_data = self._extract_proforma_data(proforma_file)
             
-            if not extracted_data.get('error'):
+            if extracted_data.get('error'):
+                raise serializers.ValidationError({
+                    "proforma": f"Failed to extract data from document: {extracted_data['error']}. Please provide title, amount, vendor_name, and business_justification manually."
+                })
+            else:
                 validated_data = self._merge_data(validated_data, extracted_data)
+                
+                required_fields = {
+                    'title': 'Title',
+                    'description': 'Description',
+                    'amount': 'Amount',
+                    'vendor_name': 'Vendor name',
+                    'business_justification': 'Business justification'
+                }
+                
+                for field, label in required_fields.items():
+                    if not validated_data.get(field):
+                        missing_fields.append(label)
+                
+                if missing_fields:
+                    raise serializers.ValidationError({
+                        "detail": f"The proforma document is missing the following required fields: {', '.join(missing_fields)}. Please provide them manually."
+                    })
+        
+        if not validated_data.get('title'):
+            validated_data['title'] = 'Purchase Request'
+        if not validated_data.get('amount'):
+            raise serializers.ValidationError({"amount": "Amount is required. Please provide it manually."})
         
         purchase_request = PurchaseRequest.objects.create(**validated_data)
         
@@ -105,7 +139,11 @@ class PurchaseRequestCreateSerializer(serializers.ModelSerializer):
             
             processor = ProformaProcessor()
             
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+            file_extension = os.path.splitext(proforma_file.name)[1].lower()
+            if not file_extension:
+                file_extension = '.pdf'
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp_file:
                 for chunk in proforma_file.chunks():
                     tmp_file.write(chunk)
                 tmp_path = tmp_file.name
