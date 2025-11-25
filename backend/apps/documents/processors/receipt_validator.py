@@ -47,28 +47,21 @@ class ReceiptValidator:
     def _get_po_data(self, purchase_request: PurchaseRequest) -> Dict:
         po = purchase_request.purchase_order_doc
         
-        if hasattr(po, 'po_data_file') and po.po_data_file:
-            try:
-                po_data = json.loads(po.po_data_file.read().decode('utf-8'))
-                return {
-                    'vendor_name': po_data.get('vendor_name', po.vendor_name),
-                    'total_amount': float(po_data.get('amount', po.total_amount)),
-                    'items': po_data.get('items', []),
-                    'po_number': po.po_number
-                }
-            except:
-                pass
+        if po.po_data_file:
+            return {
+                'vendor_name': po.po_data_file.get('vendor_name', po.vendor_name),
+                'total_amount': float(po.po_data_file.get('total_amount', po.total_amount)),
+                'items': po.po_data_file.get('items', []),
+                'po_number': po.po_number,
+                'has_detailed_items': False
+            }
         
         return {
             'vendor_name': po.vendor_name,
             'total_amount': float(po.total_amount),
-            'items': [{
-                'description': purchase_request.title,
-                'quantity': 1,
-                'unit_price': float(po.total_amount),
-                'total_price': float(po.total_amount)
-            }],
-            'po_number': po.po_number
+            'items': [],
+            'po_number': po.po_number,
+            'has_detailed_items': False
         }
     
     def _extract_receipt_data(self, file_path: str) -> Dict:
@@ -212,7 +205,7 @@ class ReceiptValidator:
         po_items = po_data.get('items', [])
         receipt_items = receipt_data.get('items', [])
         
-        if po_items and receipt_items:
+        if po_data.get('has_detailed_items') and po_items and receipt_items:
             if len(po_items) != len(receipt_items):
                 discrepancies.append({
                     "field": "item_count",
