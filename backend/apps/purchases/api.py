@@ -162,14 +162,19 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'], permission_classes=[IsStaffUser])
     def submit_receipt(self, request, pk=None):
+        """
+        Submit receipt for a purchase request with validation
+        """
         purchase_request = self.get_object()
         
+        # Check if user owns the request
         if purchase_request.created_by != request.user:
             return Response(
                 {"error": "You can only submit receipts for your own requests."},
                 status=status.HTTP_403_FORBIDDEN
             )
         
+        # Check if request is approved
         if purchase_request.status != PurchaseRequest.Status.APPROVED:
             return Response(
                 {"error": "Can only submit receipts for approved requests."},
@@ -183,7 +188,8 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']
+        # Validate file type
+        allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx', '.txt']
         file_extension = os.path.splitext(receipt_file.name)[1].lower()
         if file_extension not in allowed_extensions:
             return Response(
@@ -191,20 +197,45 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        if receipt_file.size > 10 * 1024 * 1024:
-            return Response(
-                {"error": "File size too large. Maximum size is 10MB."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Save receipt file temporarily for validation
+        import tempfile
+        with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp_file:
+            for chunk in receipt_file.chunks():
+                tmp_file.write(chunk)
+            tmp_path = tmp_file.name
         
-        purchase_request.receipt = receipt_file
-        purchase_request.save()
-    
-        serializer = self.get_serializer(purchase_request)
-        return Response({
-            "message": "Receipt submitted successfully",
-            "request": serializer.data
-        })
+        try:
+            # Validate receipt against PO
+            from apps.documents.processors.receipt_validator import ReceiptValidator
+            validator = ReceiptValidator()
+            validation_result = validator.validate_receipt(purchase_request.id, tmp_path)
+            
+            # Save the receipt to purchase request
+            purchase_request.receipt = receipt_file
+            purchase_request.save()
+            
+            # Add validation result to response
+            serializer = self.get_serializer(purchase_request)
+            response_data = {
+                "message": "Receipt submitted successfully",
+                "request": serializer.data,
+                "validation": validation_result
+            }
+            
+            # Add warning if there are discrepancies
+            if not validation_result['valid'] or validation_result['discrepancies']:
+                response_data["message"] = "Receipt submitted with validation warnings"
+            
+            return Response(response_data)
+            
+        except Exception as e:
+            return Response(
+                {"error": f"Receipt processing failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        finally:
+            # Clean up temp file
+            os.unlink(tmp_path)
     
     @action(detail=True, methods=['get'])
     def purchase_order(self, request, pk=None):
