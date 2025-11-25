@@ -105,6 +105,11 @@ class PurchaseOrder(models.Model):
         blank=True,
         help_text="Generated PO document"
     )
+    po_data_file = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Detailed PO data in JSON format"
+    )
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
