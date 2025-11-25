@@ -204,6 +204,9 @@ CORS_ALLOW_CREDENTIALS = True
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 
+# OpenAI API configuration (optional - for AI-powered proforma extraction)
+OPENAI_API_KEY = config('OPENAI_API_KEY', default=None)
+
 # Logging configuration
 LOGGING = {
     'version': 1,
