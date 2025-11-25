@@ -43,7 +43,8 @@ class PurchaseOrderGenerator:
                 vendor_contact=po_data['vendor_contact'],
                 vendor_address=po_data['vendor_address'],
                 total_amount=po_data['total_amount'],
-                terms=json.dumps(po_data['terms'])
+                terms=json.dumps(po_data['terms']),
+                po_data_file=po_data
             )
             
             # Generate PDF with PO number
@@ -100,14 +101,12 @@ class PurchaseOrderGenerator:
             })
         
         return {
-            # Basic request info
             'title': purchase_request.title,
             'description': purchase_request.description,
             'amount': str(purchase_request.amount),
-            'total_amount': purchase_request.amount,  # For PurchaseOrder model
+            'total_amount': float(purchase_request.amount),
             'urgency': purchase_request.urgency,
             
-            # Vendor information
             'vendor_name': purchase_request.vendor_name or 'Vendor Name',
             'vendor_contact': purchase_request.vendor_contact or 'Contact Information',
             'vendor_address': purchase_request.vendor_address or 'Vendor Address',
