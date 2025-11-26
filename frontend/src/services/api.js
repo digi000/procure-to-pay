@@ -62,7 +62,7 @@ export const purchaseAPI = {
   submitReceipt: (id, file) => {
     const formData = new FormData();
     formData.append('receipt', file);
-    return api.post(`/requests/${id}/submit-receipt/`, formData, {
+    return api.post(`/requests/${id}/submit_receipt/`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
