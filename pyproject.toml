@@ -18,6 +18,8 @@ reportlab = "<4"
 pdfplumber = "^0.5.28"
 openai = "^2.2.0"
 python-docx = "^0.8.11"
+drf-spectacular = "^0.29.0"
+gunicorn = "^23.0.0"
 
 
 [build-system]
