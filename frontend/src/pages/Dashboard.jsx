@@ -36,37 +36,51 @@ const Dashboard = () => {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {user?.role === 'staff' && (
-          <Link
-            to="/create-request"
-            className="bg-white p-6 rounded-lg shadow-sm border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-colors"
-          >
-            <div className="flex items-center">
-              <Plus className="h-8 w-8 text-blue-600" />
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">New Request</h3>
-                <p className="text-gray-600 mt-1">Create a new purchase request</p>
+          <>
+            <Link
+              to="/create-request"
+              className="bg-white p-6 rounded-lg shadow-sm border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-colors"
+            >
+              <div className="flex items-center">
+                <Plus className="h-8 w-8 text-blue-600" />
+                <div className="ml-4">
+                  <h3 className="text-lg font-semibold text-gray-900">New Request</h3>
+                  <p className="text-gray-600 mt-1">Create a new purchase request</p>
+                </div>
+              </div>
+            </Link>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <div className="flex items-center">
+                <FileText className="h-8 w-8 text-green-600" />
+                <div className="ml-4">
+                  <h3 className="text-lg font-semibold text-gray-900">My Requests</h3>
+                  <p className="text-gray-600 mt-1">View all your purchase requests</p>
+                </div>
               </div>
             </div>
-          </Link>
+          </>
         )}
-
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex items-center">
-            <FileText className="h-8 w-8 text-green-600" />
-            <div className="ml-4">
-              <h3 className="text-lg font-semibold text-gray-900">My Requests</h3>
-              <p className="text-gray-600 mt-1">View all your purchase requests</p>
-            </div>
-          </div>
-        </div>
 
         {(user?.role === 'approver_l1' || user?.role === 'approver_l2') && (
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <div className="flex items-center">
               <CheckCircle className="h-8 w-8 text-yellow-600" />
               <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">Pending Approval</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Pending Approvals</h3>
                 <p className="text-gray-600 mt-1">Review requests waiting for your approval</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {user?.role === 'finance' && (
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            <div className="flex items-center">
+              <FileText className="h-8 w-8 text-indigo-600" />
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">Approved Requests</h3>
+                <p className="text-gray-600 mt-1">View requests ready for payment processing</p>
               </div>
             </div>
           </div>
