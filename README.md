@@ -437,6 +437,7 @@ finance = User.objects.create_user(
     first_name='Finance',
     last_name='User'
 )
+```
 
 ## 🙏 Acknowledgments
 
