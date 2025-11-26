@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import login
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse
 from .models import User
 from .serializers import (
     UserSerializer, 
@@ -12,6 +13,35 @@ from .serializers import (
 )
 
 
+@extend_schema_view(
+    register=extend_schema(
+        tags=['Authentication'],
+        summary='Register a new user',
+        description='Create a new user account. Staff users must provide a manager ID.',
+        responses={
+            201: OpenApiResponse(description='User registered successfully'),
+            400: OpenApiResponse(description='Validation error'),
+        }
+    ),
+    login=extend_schema(
+        tags=['Authentication'],
+        summary='Login user',
+        description='Authenticate user and return JWT tokens.',
+        responses={
+            200: OpenApiResponse(description='Login successful'),
+            400: OpenApiResponse(description='Invalid credentials'),
+        }
+    ),
+    logout=extend_schema(
+        tags=['Authentication'],
+        summary='Logout user',
+        description='Blacklist the refresh token to logout.',
+        responses={
+            200: OpenApiResponse(description='Successfully logged out'),
+            400: OpenApiResponse(description='Invalid token'),
+        }
+    ),
+)
 class AuthViewSet(GenericViewSet):
     permission_classes = [permissions.AllowAny]
     
@@ -72,6 +102,13 @@ class AuthViewSet(GenericViewSet):
             }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema_view(
+    me=extend_schema(
+        tags=['Users'],
+        summary='Get or update current user profile',
+        description='Retrieve or update the authenticated user\'s profile information.',
+    ),
+)
 class UserViewSet(GenericViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
