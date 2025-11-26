@@ -1,0 +1,404 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { purchaseAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  ArrowLeft,
+  Calendar,
+  DollarSign,
+  User,
+  Building,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertCircle,
+  Download,
+  Phone,
+  MapPin
+} from 'lucide-react';
+
+const RequestDetail = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [request, setRequest] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    loadRequest();
+  }, [id]);
+
+  const loadRequest = async () => {
+    try {
+      setLoading(true);
+      const response = await purchaseAPI.getRequest(id);
+      setRequest(response.data);
+    } catch (err) {
+      setError('Failed to load request details');
+      console.error('Error loading request:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'approved':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'rejected':
+        return <XCircle className="h-5 w-5 text-red-500" />;
+      case 'pending':
+        return <Clock className="h-5 w-5 text-yellow-500" />;
+      default:
+        return <AlertCircle className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'approved':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'rejected':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getUrgencyColor = (urgency) => {
+    switch (urgency) {
+      case 'critical':
+        return 'bg-red-100 text-red-800';
+      case 'high':
+        return 'bg-orange-100 text-orange-800';
+      case 'normal':
+        return 'bg-blue-100 text-blue-800';
+      case 'low':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatShortDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-4xl mx-auto">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center text-blue-600 hover:text-blue-500 mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </button>
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded">
+            {error}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!request) {
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-6">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center text-blue-600 hover:text-blue-500 mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </button>
+          
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">{request.title}</h1>
+              <p className="text-gray-500 mt-1">Request #{request.id}</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(request.status)}`}>
+                {getStatusIcon(request.status)}
+                <span className="ml-2">{request.status_display}</span>
+              </span>
+              {request.urgency && (
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getUrgencyColor(request.urgency)}`}>
+                  {request.urgency.charAt(0).toUpperCase() + request.urgency.slice(1)}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Description */}
+            <div className="bg-white shadow-sm rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Description</h2>
+              <p className="text-gray-700 whitespace-pre-wrap">
+                {request.description || 'No description provided.'}
+              </p>
+            </div>
+
+            {/* Business Justification */}
+            <div className="bg-white shadow-sm rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Business Justification</h2>
+              <p className="text-gray-700 whitespace-pre-wrap">
+                {request.business_justification || 'No justification provided.'}
+              </p>
+            </div>
+
+            {/* Vendor Information */}
+            <div className="bg-white shadow-sm rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Vendor Information</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-start">
+                  <Building className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Vendor Name</p>
+                    <p className="text-gray-900">{request.vendor_name || 'N/A'}</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <Phone className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Contact</p>
+                    <p className="text-gray-900">{request.vendor_contact || 'N/A'}</p>
+                  </div>
+                </div>
+                {request.vendor_address && (
+                  <div className="flex items-start md:col-span-2">
+                    <MapPin className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Address</p>
+                      <p className="text-gray-900">{request.vendor_address}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Documents */}
+            <div className="bg-white shadow-sm rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Documents</h2>
+              <div className="space-y-3">
+                {request.proforma ? (
+                  <a
+                    href={request.proforma}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    <FileText className="h-5 w-5 text-blue-500 mr-3" />
+                    <span className="text-gray-700">Proforma Invoice</span>
+                    <Download className="h-4 w-4 text-gray-400 ml-auto" />
+                  </a>
+                ) : null}
+                {request.quotation_comparison ? (
+                  <a
+                    href={request.quotation_comparison}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    <FileText className="h-5 w-5 text-green-500 mr-3" />
+                    <span className="text-gray-700">Quotation Comparison</span>
+                    <Download className="h-4 w-4 text-gray-400 ml-auto" />
+                  </a>
+                ) : null}
+                {request.specification_sheet ? (
+                  <a
+                    href={request.specification_sheet}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    <FileText className="h-5 w-5 text-purple-500 mr-3" />
+                    <span className="text-gray-700">Specification Sheet</span>
+                    <Download className="h-4 w-4 text-gray-400 ml-auto" />
+                  </a>
+                ) : null}
+                {request.purchase_order ? (
+                  <a
+                    href={request.purchase_order}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    <FileText className="h-5 w-5 text-indigo-500 mr-3" />
+                    <span className="text-gray-700">Purchase Order</span>
+                    <Download className="h-4 w-4 text-gray-400 ml-auto" />
+                  </a>
+                ) : null}
+                {!request.proforma && !request.quotation_comparison && !request.specification_sheet && !request.purchase_order && (
+                  <p className="text-gray-500 text-sm">No documents attached.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Approval History */}
+            {request.approvals && request.approvals.length > 0 && (
+              <div className="bg-white shadow-sm rounded-lg p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Approval History</h2>
+                <div className="space-y-4">
+                  {request.approvals.map((approval) => (
+                    <div
+                      key={approval.id}
+                      className={`flex items-start p-4 rounded-lg ${
+                        approval.approved ? 'bg-green-50' : 'bg-red-50'
+                      }`}
+                    >
+                      {approval.approved ? (
+                        <CheckCircle className="h-5 w-5 text-green-500 mr-3 mt-0.5" />
+                      ) : (
+                        <XCircle className="h-5 w-5 text-red-500 mr-3 mt-0.5" />
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="font-medium text-gray-900">
+                            {approval.approver_name}
+                            <span className="text-sm font-normal text-gray-500 ml-2">
+                              ({approval.approver_role})
+                            </span>
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {formatShortDate(approval.created_at)}
+                          </p>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Level {approval.approval_level} - {approval.approved ? 'Approved' : 'Rejected'}
+                        </p>
+                        {approval.comments && (
+                          <p className="text-sm text-gray-700 mt-2 italic">
+                            "{approval.comments}"
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Amount Card */}
+            <div className="bg-white shadow-sm rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Amount</h2>
+              <div className="flex items-center">
+                <DollarSign className="h-8 w-8 text-green-500 mr-2" />
+                <span className="text-3xl font-bold text-gray-900">
+                  {parseFloat(request.amount).toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {/* Request Info */}
+            <div className="bg-white shadow-sm rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Request Info</h2>
+              <div className="space-y-4">
+                <div className="flex items-start">
+                  <User className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Created By</p>
+                    <p className="text-gray-900">{request.created_by_name}</p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <Calendar className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Created On</p>
+                    <p className="text-gray-900">{formatDate(request.created_at)}</p>
+                  </div>
+                </div>
+                {request.requested_delivery_date && (
+                  <div className="flex items-start">
+                    <Calendar className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Delivery Date</p>
+                      <p className="text-gray-900">{formatShortDate(request.requested_delivery_date)}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Budget Codes */}
+            {(request.cost_center || request.gl_account || request.budget_code || request.project_code) && (
+              <div className="bg-white shadow-sm rounded-lg p-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">Budget Info</h2>
+                <div className="space-y-3">
+                  {request.cost_center && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Cost Center</p>
+                      <p className="text-gray-900">{request.cost_center}</p>
+                    </div>
+                  )}
+                  {request.gl_account && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">GL Account</p>
+                      <p className="text-gray-900">{request.gl_account}</p>
+                    </div>
+                  )}
+                  {request.budget_code && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Budget Code</p>
+                      <p className="text-gray-900">{request.budget_code}</p>
+                    </div>
+                  )}
+                  {request.project_code && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-500">Project Code</p>
+                      <p className="text-gray-900">{request.project_code}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default RequestDetail;
