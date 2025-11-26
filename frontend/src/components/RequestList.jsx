@@ -78,8 +78,10 @@ const RequestList = () => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold text-gray-900">
-          Purchase Requests
-          {user?.is_staff_role && <span className="text-sm font-normal text-gray-600 ml-2">(Your requests)</span>}
+          {user?.role === 'staff' && 'My Purchase Requests'}
+          {(user?.role === 'approver_l1' || user?.role === 'approver_l2') && 'Requests Pending Review'}
+          {user?.role === 'finance' && 'Approved Requests'}
+          {!['staff', 'approver_l1', 'approver_l2', 'finance'].includes(user?.role) && 'Purchase Requests'}
         </h2>
         <div className="text-sm text-gray-500">
           {requests.length} request{requests.length !== 1 ? 's' : ''} found
@@ -91,9 +93,10 @@ const RequestList = () => {
           <User className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-4 text-lg font-medium text-gray-900">No requests found</h3>
           <p className="mt-2 text-gray-500">
-            {user?.is_staff_role 
-              ? "You haven't created any purchase requests yet." 
-              : "There are no requests to display."}
+            {user?.role === 'staff' && "You haven't created any purchase requests yet."}
+            {(user?.role === 'approver_l1' || user?.role === 'approver_l2') && "There are no requests waiting for your approval."}
+            {user?.role === 'finance' && "There are no approved requests to process."}
+            {!['staff', 'approver_l1', 'approver_l2', 'finance'].includes(user?.role) && "There are no requests to display."}
           </p>
         </div>
       ) : (
