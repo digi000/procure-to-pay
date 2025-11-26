@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Layout from './components/Layout';
 import CreateRequest from './pages/CreateRequest';
 import RequestDetail from './pages/RequestDetail';
+import EditRequest from './pages/EditRequest';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -60,6 +61,13 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <RequestDetail />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/requests/:id/edit" element={
+            <ProtectedRoute>
+              <Layout>
+                <EditRequest />
               </Layout>
             </ProtectedRoute>
           } />
