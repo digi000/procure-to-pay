@@ -3,7 +3,7 @@
 # ============================================
 # Stage 1: Frontend Build
 # ============================================
-FROM node:18-alpine AS frontend-builder
+FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
@@ -22,7 +22,7 @@ RUN npm run build
 # ============================================
 # Stage 2: Backend with Frontend Static Files
 # ============================================
-FROM python:3.11-slim
+FROM python:3.8-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
