@@ -213,18 +213,30 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
                 "validation": validation_result
             }
             
-            if not validation_result['valid'] or validation_result['discrepancies']:
+            if validation_result.get('error'):
+                response_data["message"] = "Receipt submitted but validation encountered an error"
+            elif not validation_result.get('valid') or validation_result.get('discrepancies'):
                 response_data["message"] = "Receipt submitted with validation warnings"
             
             return Response(response_data)
             
         except Exception as e:
-            return Response(
-                {"error": f"Receipt processing failed: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            purchase_request.receipt = receipt_file
+            purchase_request.save()
+            
+            serializer = self.get_serializer(purchase_request)
+            return Response({
+                "message": "Receipt submitted but validation failed",
+                "request": serializer.data,
+                "validation": {
+                    "valid": False,
+                    "error": f"Validation error: {str(e)}",
+                    "discrepancies": []
+                }
+            })
         finally:
-            os.unlink(tmp_path)
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
     
     @action(detail=True, methods=['get'])
     def purchase_order(self, request, pk=None):
