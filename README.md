@@ -1,5 +1,18 @@
 # Procure-to-Pay System
 
+> 🚀 **Live Demo**: [http://142.93.165.46](http://142.93.165.46)  
+> 📚 **API Documentation**: [http://142.93.165.46/api/docs/](http://142.93.165.46/api/docs/)
+
+### Demo Credentials
+| Role | Username | Password |
+|------|----------|----------|
+| Staff | `staff` | `test123` |
+| Approver L1 | `approver_l1` | `test123` |
+| Approver L2 | `approver_l2` | `test123` |
+| Finance | `finance` | `test123` |
+
+---
+
 A comprehensive Purchase Request & Approval System built with Django REST Framework and React. This system enables staff to submit purchase requests, managers to approve/reject them through a parallel approval process  workflow, and automatically generates Purchase Orders upon final approval.
 
 ## 🌟 Features
