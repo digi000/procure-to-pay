@@ -1,15 +1,23 @@
 # Procure-to-Pay System
 
-> 🚀 **Live Demo**: [http://142.93.165.46](http://142.93.165.46)  
-> 📚 **API Documentation**: [http://142.93.165.46/api/docs/](http://142.93.165.46/api/docs/)
+A full-stack Purchase Request & Approval System with multi-level workflows and automatic PO generation.
 
-### Demo Credentials
-| Role | Username | Password |
-|------|----------|----------|
-| Staff | `staff` | `test123` |
-| Approver L1 | `approver_l1` | `test123` |
-| Approver L2 | `approver_l2` | `test123` |
-| Finance | `finance` | `test123` |
+---
+
+## 🎯 Quick Access for Reviewers
+
+> **🚀 [Live Demo](http://142.93.165.46)** | **📚 [API Docs](http://142.93.165.46/api/docs/)**
+
+### 🔑 Login Credentials (all use password: `test123`)
+
+| Step | Login As | What You Can Do |
+|------|----------|-----------------|
+| 1️⃣ | `staff` | Create a purchase request → upload a proforma invoice |
+| 2️⃣ | `approver_l1` | Review and approve/reject the request |
+| 3️⃣ | `approver_l2` | Give final approval → triggers automatic PO generation |
+| 4️⃣ | `finance` | View approved requests and download Purchase Order PDFs |
+
+💡 **Tip**: Try the full workflow - create a request as staff, then approve it with both approvers to see the auto-generated Purchase Order!
 
 ---
 
