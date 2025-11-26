@@ -25,6 +25,10 @@ const RequestDetail = () => {
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [approvalAction, setApprovalAction] = useState(null); // 'approve' or 'reject'
+  const [comments, setComments] = useState('');
 
   useEffect(() => {
     loadRequest();
@@ -40,6 +44,54 @@ const RequestDetail = () => {
       console.error('Error loading request:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const canApprove = () => {
+    if (!user || !request) return false;
+    if (request.status !== 'pending') return false;
+    
+    const isApprover = user.role === 'approver_l1' || user.role === 'approver_l2';
+    if (!isApprover) return false;
+    
+    // Check if user has already approved/rejected this request
+    const userApproval = request.approvals?.find(a => a.approver === user.id);
+    if (userApproval) return false;
+    
+    return true;
+  };
+
+  const openApprovalModal = (action) => {
+    setApprovalAction(action);
+    setComments('');
+    setShowApprovalModal(true);
+  };
+
+  const closeApprovalModal = () => {
+    setShowApprovalModal(false);
+    setApprovalAction(null);
+    setComments('');
+  };
+
+  const handleApprovalAction = async () => {
+    if (!approvalAction) return;
+    
+    setActionLoading(true);
+    try {
+      if (approvalAction === 'approve') {
+        await purchaseAPI.approveRequest(id, comments);
+      } else {
+        await purchaseAPI.rejectRequest(id, comments);
+      }
+      closeApprovalModal();
+      // Reload the request to show updated status
+      await loadRequest();
+    } catch (err) {
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || `Failed to ${approvalAction} request`;
+      setError(errorMessage);
+      closeApprovalModal();
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -165,6 +217,27 @@ const RequestDetail = () => {
               )}
             </div>
           </div>
+
+          {/* Approval Actions */}
+          {canApprove() && (
+            <div className="mt-4 flex items-center space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <span className="text-blue-800 font-medium">This request needs your approval:</span>
+              <button
+                onClick={() => openApprovalModal('approve')}
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Approve
+              </button>
+              <button
+                onClick={() => openApprovalModal('reject')}
+                className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Reject
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -397,6 +470,57 @@ const RequestDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Approval Modal */}
+      {showApprovalModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                {approvalAction === 'approve' ? 'Approve Request' : 'Reject Request'}
+              </h3>
+              <p className="text-gray-600 mb-4">
+                {approvalAction === 'approve'
+                  ? 'Are you sure you want to approve this purchase request?'
+                  : 'Are you sure you want to reject this purchase request?'}
+              </p>
+              <div className="mb-4">
+                <label htmlFor="comments" className="block text-sm font-medium text-gray-700 mb-2">
+                  Comments {approvalAction === 'reject' && <span className="text-red-500">*</span>}
+                </label>
+                <textarea
+                  id="comments"
+                  rows={3}
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  placeholder={approvalAction === 'approve' ? 'Optional comments...' : 'Please provide a reason for rejection...'}
+                  className="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={closeApprovalModal}
+                  disabled={actionLoading}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleApprovalAction}
+                  disabled={actionLoading || (approvalAction === 'reject' && !comments.trim())}
+                  className={`px-4 py-2 rounded-md text-white disabled:opacity-50 ${
+                    approvalAction === 'approve'
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {actionLoading ? 'Processing...' : approvalAction === 'approve' ? 'Approve' : 'Reject'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
