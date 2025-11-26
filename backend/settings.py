@@ -21,23 +21,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-a5#et%np!sp^48^o9)s0=v=9pxpjei0+(v9%4$)t@&-odetw^i'
+from decouple import config, Csv
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-a5#et%np!sp^48^o9)s0=v=9pxpjei0+(v9%4$)t@&-odetw^i')
+
+DEBUG = config('DEBUG', default=True, cast=bool)
+
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,0.0.0.0', cast=Csv())
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
     'django.contrib.staticfiles',
     
     # Third party apps
@@ -45,12 +43,12 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
+    'drf_spectacular',
     
     # Local apps
     'apps.users',
     'apps.purchases',
     'apps.documents',
-    'apps.approvals',
 ]
 
 # Custom user model
@@ -59,11 +57,8 @@ AUTH_USER_MODEL = 'users.User'
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -160,6 +155,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
     'DEFAULT_RENDERER_CLASSES': [
@@ -191,11 +187,15 @@ SIMPLE_JWT = {
 }
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000", 
-    "http://127.0.0.1:3000",
- #   "https://9ade9bdb0950.ngrok-free.app", for testing
-]
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='http://localhost:3000,http://127.0.0.1:3000',
+    cast=Csv()
+)
+
+# Allow all origins in development
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -205,6 +205,52 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
 
 # OpenAI API configuration
 OPENAI_API_KEY = config('OPENAI_API_KEY', default=None)
+
+# drf-spectacular settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Procure-to-Pay API',
+    'DESCRIPTION': '''A comprehensive Purchase Request & Approval System API.
+    
+## Features
+- Staff can create purchase requests and submit receipts
+- Multi-level approval workflow (L1 and L2 approvers)
+- Automatic Purchase Order generation on final approval
+- AI-powered document processing for proforma and receipt validation
+- Finance team access to approved requests
+
+## Authentication
+This API uses JWT (JSON Web Token) authentication. Include the token in the Authorization header:
+```
+Authorization: Bearer <your_access_token>
+```
+    ''',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': r'/api/',
+    'TAGS': [
+        {'name': 'Authentication', 'description': 'User registration, login, and token management'},
+        {'name': 'Users', 'description': 'User profile management'},
+        {'name': 'Purchase Requests', 'description': 'Create, view, update, and manage purchase requests'},
+        {'name': 'Approvals', 'description': 'Approve or reject purchase requests'},
+    ],
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': False,
+        'filter': True,
+    },
+    'SECURITY': [{'Bearer': []}],
+    'APPEND_COMPONENTS': {
+        'securitySchemes': {
+            'Bearer': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+            }
+        }
+    },
+}
 
 # Logging configuration
 LOGGING = {
