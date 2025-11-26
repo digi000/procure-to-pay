@@ -34,6 +34,7 @@ const RequestDetail = () => {
   const [comments, setComments] = useState('');
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [receiptFile, setReceiptFile] = useState(null);
+  const [validationResult, setValidationResult] = useState(null);
 
   useEffect(() => {
     loadRequest();
@@ -101,12 +102,16 @@ const RequestDetail = () => {
     if (!receiptFile) return;
     
     setActionLoading(true);
+    setValidationResult(null);
     try {
-      await purchaseAPI.submitReceipt(id, receiptFile);
+      const response = await purchaseAPI.submitReceipt(id, receiptFile);
       closeReceiptModal();
+      if (response.data.validation) {
+        setValidationResult(response.data.validation);
+      }
       await loadRequest();
     } catch (err) {
-      const errorMessage = err.response?.data?.detail || err.response?.data?.message || 'Failed to submit receipt';
+      const errorMessage = err.response?.data?.detail || err.response?.data?.error || err.response?.data?.message || 'Failed to submit receipt';
       setError(errorMessage);
       closeReceiptModal();
     } finally {
@@ -312,6 +317,67 @@ const RequestDetail = () => {
                 <Upload className="h-4 w-4 mr-2" />
                 Submit Receipt
               </button>
+            </div>
+          )}
+
+          {/* Validation Results */}
+          {validationResult && (
+            <div className={`mt-4 p-4 rounded-lg border ${
+              validationResult.valid 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-yellow-50 border-yellow-200'
+            }`}>
+              <div className="flex items-start">
+                {validationResult.valid ? (
+                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 mr-3" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5 mr-3" />
+                )}
+                <div className="flex-1">
+                  <h3 className={`font-medium ${
+                    validationResult.valid ? 'text-green-800' : 'text-yellow-800'
+                  }`}>
+                    {validationResult.valid 
+                      ? 'Receipt Validated Successfully' 
+                      : 'Receipt Validation Warnings'}
+                  </h3>
+                  
+                  {validationResult.error && (
+                    <p className="mt-1 text-sm text-yellow-700">
+                      {validationResult.error}
+                    </p>
+                  )}
+                  
+                  {validationResult.discrepancies && validationResult.discrepancies.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {validationResult.discrepancies.map((disc, index) => (
+                        <div 
+                          key={index} 
+                          className={`p-2 rounded text-sm ${
+                            disc.severity === 'high' 
+                              ? 'bg-red-100 text-red-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}
+                        >
+                          <span className="font-medium">{disc.field}:</span> {disc.message}
+                          <div className="mt-1 text-xs">
+                            <span>PO: {disc.po_value}</span>
+                            <span className="mx-2">→</span>
+                            <span>Receipt: {disc.receipt_value}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <button
+                    onClick={() => setValidationResult(null)}
+                    className="mt-3 text-sm text-gray-600 hover:text-gray-800"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
