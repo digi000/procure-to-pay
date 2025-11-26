@@ -13,6 +13,24 @@
 
 ---
 
+## 📑 Table of Contents
+
+- [Features](#-features)
+- [Tech Stack](#️-tech-stack)
+- [Prerequisites](#-prerequisites)
+- [Quick Start](#-quick-start)
+- [API Documentation](#-api-documentation)
+- [API Endpoints](#-api-endpoints)
+- [Authentication](#-authentication)
+- [Project Structure](#-project-structure)
+- [Workflow](#-workflow)
+- [Docker Setup](#-docker-setup)
+- [DigitalOcean Deployment](#-digitalocean-deployment)
+- [Configuration](#-configuration)
+- [Creating Test Users](#-creating-test-users)
+
+---
+
 A comprehensive Purchase Request & Approval System built with Django REST Framework and React. This system enables staff to submit purchase requests, managers to approve/reject them through a parallel approval process  workflow, and automatically generates Purchase Orders upon final approval.
 
 ## 🌟 Features
