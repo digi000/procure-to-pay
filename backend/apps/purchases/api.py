@@ -3,6 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
 from django.db.models import Count, Q
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiResponse, inline_serializer
+from rest_framework import serializers
 import os
 import json
 from .models import PurchaseRequest, Approval
@@ -14,6 +16,43 @@ from .serializers import (
 from .permissions import IsStaffUser, IsApproverUser, IsFinanceUser, IsOwnerOrApprover
 
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Purchase Requests'],
+        summary='List purchase requests',
+        description='Get all purchase requests. Results are filtered based on user role:\n'
+                    '- Staff: Only their own requests\n'
+                    '- Approver L1: Requests from their direct reports\n'
+                    '- Approver L2: All requests\n'
+                    '- Finance: Only fully approved requests',
+    ),
+    create=extend_schema(
+        tags=['Purchase Requests'],
+        summary='Create purchase request',
+        description='Create a new purchase request. Only staff users can create requests. '
+                    'Optionally include proforma, quotation comparison, and specification sheet files.',
+    ),
+    retrieve=extend_schema(
+        tags=['Purchase Requests'],
+        summary='Get purchase request details',
+        description='Retrieve detailed information about a specific purchase request including approval history.',
+    ),
+    update=extend_schema(
+        tags=['Purchase Requests'],
+        summary='Update purchase request',
+        description='Update an existing purchase request. Only the creator can update, and only while status is pending.',
+    ),
+    partial_update=extend_schema(
+        tags=['Purchase Requests'],
+        summary='Partially update purchase request',
+        description='Partially update a purchase request. Same restrictions as full update.',
+    ),
+    destroy=extend_schema(
+        tags=['Purchase Requests'],
+        summary='Delete purchase request',
+        description='Delete a purchase request. Only allowed for pending requests by the creator.',
+    ),
+)
 class PurchaseRequestViewSet(viewsets.ModelViewSet):
     queryset = PurchaseRequest.objects.all()
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrApprover]
@@ -85,10 +124,39 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
         
         return super().partial_update(request, *args, **kwargs)
     
+    @extend_schema(
+        tags=['Approvals'],
+        summary='Approve purchase request',
+        description='Approve a purchase request. Requires approver role. '
+                    'After both L1 and L2 approvals, a Purchase Order is automatically generated.',
+        request=inline_serializer(
+            name='ApprovalRequest',
+            fields={'comments': serializers.CharField(required=False, allow_blank=True)}
+        ),
+        responses={
+            200: OpenApiResponse(description='Request approved successfully'),
+            400: OpenApiResponse(description='Request already processed'),
+            403: OpenApiResponse(description='Permission denied'),
+        }
+    )
     @action(detail=True, methods=['patch'], permission_classes=[IsApproverUser])
     def approve(self, request, pk=None):
         return self._handle_approval(request, pk, approved=True)
     
+    @extend_schema(
+        tags=['Approvals'],
+        summary='Reject purchase request',
+        description='Reject a purchase request. Requires approver role. Comments are required for rejection.',
+        request=inline_serializer(
+            name='RejectionRequest',
+            fields={'comments': serializers.CharField(required=True)}
+        ),
+        responses={
+            200: OpenApiResponse(description='Request rejected successfully'),
+            400: OpenApiResponse(description='Request already processed'),
+            403: OpenApiResponse(description='Permission denied'),
+        }
+    )
     @action(detail=True, methods=['patch'], permission_classes=[IsApproverUser])
     def reject(self, request, pk=None):
         return self._handle_approval(request, pk, approved=False)
@@ -161,6 +229,19 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
         
         return Response(response_data)
     
+    @extend_schema(
+        tags=['Purchase Requests'],
+        summary='Submit receipt',
+        description='Submit a receipt for an approved purchase request. '
+                    'The system will validate the receipt against the Purchase Order using AI '
+                    'and flag any discrepancies in vendor, items, or amounts.',
+        request={'multipart/form-data': {'type': 'object', 'properties': {'receipt': {'type': 'string', 'format': 'binary'}}}},
+        responses={
+            200: OpenApiResponse(description='Receipt submitted with validation results'),
+            400: OpenApiResponse(description='Invalid request or file type'),
+            403: OpenApiResponse(description='Permission denied'),
+        }
+    )
     @action(detail=True, methods=['post'], permission_classes=[IsStaffUser])
     def submit_receipt(self, request, pk=None):
         purchase_request = self.get_object()
@@ -238,6 +319,15 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
             if os.path.exists(tmp_path):
                 os.unlink(tmp_path)
     
+    @extend_schema(
+        tags=['Purchase Requests'],
+        summary='Download purchase order',
+        description='Download the generated Purchase Order PDF for an approved request.',
+        responses={
+            200: OpenApiResponse(description='PDF file download'),
+            404: OpenApiResponse(description='Purchase order not generated yet'),
+        }
+    )
     @action(detail=True, methods=['get'])
     def purchase_order(self, request, pk=None):
         purchase_request = self.get_object()
@@ -262,6 +352,11 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @extend_schema(
+        tags=['Purchase Requests'],
+        summary='Get purchase order data',
+        description='Get the extracted data from the purchase order in JSON format.',
+    )
     @action(detail=True, methods=['get'])
     def po_data(self, request, pk=None):
         purchase_request = self.get_object()
