@@ -38,6 +38,8 @@ class ProformaProcessor:
             return self._extract_from_word(file_path)
         elif file_extension == 'txt':
             return self._extract_from_text(file_path)
+        elif file_extension in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']:
+            return self._extract_from_image(file_path)
         else:
             return ""
     
@@ -48,6 +50,21 @@ class ProformaProcessor:
         except Exception as e:
             print(f"Text file reading error: {e}")
             return ""
+    
+    def _extract_from_image(self, file_path: str) -> str:
+        try:
+            import pytesseract
+            from PIL import Image
+            
+            image = Image.open(file_path)
+            text = pytesseract.image_to_string(image)
+            return text
+        except ImportError:
+            print("OCR libraries not installed. Install pytesseract and Pillow.")
+            return "[Image file - OCR not available. Manual review required.]"
+        except Exception as e:
+            print(f"Image extraction error: {e}")
+            return "[Image file - extraction failed. Manual review required.]"
         
     def _extract_from_pdf(self, file_path: str) -> str:
         text = ""
