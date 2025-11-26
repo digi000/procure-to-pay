@@ -15,7 +15,8 @@ import {
   AlertCircle,
   Download,
   Phone,
-  MapPin
+  MapPin,
+  Edit
 } from 'lucide-react';
 
 const RequestDetail = () => {
@@ -58,6 +59,14 @@ const RequestDetail = () => {
     const userApproval = request.approvals?.find(a => a.approver === user.id);
     if (userApproval) return false;
     
+    return true;
+  };
+
+  const canEdit = () => {
+    if (!user || !request) return false;
+    if (request.status !== 'pending') return false;
+    if (user.role !== 'staff') return false;
+    if (request.created_by !== user.id) return false;
     return true;
   };
 
@@ -206,6 +215,15 @@ const RequestDetail = () => {
               <p className="text-gray-500 mt-1">Request #{request.id}</p>
             </div>
             <div className="flex items-center space-x-2">
+              {canEdit() && (
+                <button
+                  onClick={() => navigate(`/requests/${id}/edit`)}
+                  className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
+                >
+                  <Edit className="h-4 w-4 mr-1" />
+                  Edit
+                </button>
+              )}
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(request.status)}`}>
                 {getStatusIcon(request.status)}
                 <span className="ml-2">{request.status_display}</span>
