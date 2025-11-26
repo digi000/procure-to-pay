@@ -1,23 +1,19 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   db:
     image: postgres:12-alpine
     container_name: procure_db
     restart: unless-stopped
-    env_file:
-      - backend/.env
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: procure_to_pay
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: procure#T1
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - procure_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
