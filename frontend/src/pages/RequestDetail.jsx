@@ -16,7 +16,9 @@ import {
   Download,
   Phone,
   MapPin,
-  Edit
+  Edit,
+  Upload,
+  Receipt
 } from 'lucide-react';
 
 const RequestDetail = () => {
@@ -30,6 +32,8 @@ const RequestDetail = () => {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [approvalAction, setApprovalAction] = useState(null); // 'approve' or 'reject'
   const [comments, setComments] = useState('');
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptFile, setReceiptFile] = useState(null);
 
   useEffect(() => {
     loadRequest();
@@ -68,6 +72,46 @@ const RequestDetail = () => {
     if (user.role !== 'staff') return false;
     if (request.created_by !== user.id) return false;
     return true;
+  };
+
+  const canSubmitReceipt = () => {
+    if (!user || !request) return false;
+    if (request.status !== 'approved') return false;
+    if (user.role !== 'staff') return false;
+    if (request.created_by !== user.id) return false;
+    if (request.receipt) return false; // Already has receipt
+    return true;
+  };
+
+  const openReceiptModal = () => {
+    setReceiptFile(null);
+    setShowReceiptModal(true);
+  };
+
+  const closeReceiptModal = () => {
+    setShowReceiptModal(false);
+    setReceiptFile(null);
+  };
+
+  const handleReceiptFileChange = (e) => {
+    setReceiptFile(e.target.files[0]);
+  };
+
+  const handleReceiptSubmit = async () => {
+    if (!receiptFile) return;
+    
+    setActionLoading(true);
+    try {
+      await purchaseAPI.submitReceipt(id, receiptFile);
+      closeReceiptModal();
+      await loadRequest();
+    } catch (err) {
+      const errorMessage = err.response?.data?.detail || err.response?.data?.message || 'Failed to submit receipt';
+      setError(errorMessage);
+      closeReceiptModal();
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const openApprovalModal = (action) => {
@@ -256,6 +300,20 @@ const RequestDetail = () => {
               </button>
             </div>
           )}
+
+          {/* Receipt Submission */}
+          {canSubmitReceipt() && (
+            <div className="mt-4 flex items-center space-x-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <span className="text-green-800 font-medium">This request is approved. Submit your receipt:</span>
+              <button
+                onClick={openReceiptModal}
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Submit Receipt
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -359,7 +417,19 @@ const RequestDetail = () => {
                     <Download className="h-4 w-4 text-gray-400 ml-auto" />
                   </a>
                 ) : null}
-                {!request.proforma && !request.quotation_comparison && !request.specification_sheet && !request.purchase_order && (
+                {request.receipt ? (
+                  <a
+                    href={request.receipt}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    <Receipt className="h-5 w-5 text-emerald-500 mr-3" />
+                    <span className="text-gray-700">Receipt</span>
+                    <Download className="h-4 w-4 text-gray-400 ml-auto" />
+                  </a>
+                ) : null}
+                {!request.proforma && !request.quotation_comparison && !request.specification_sheet && !request.purchase_order && !request.receipt && (
                   <p className="text-gray-500 text-sm">No documents attached.</p>
                 )}
               </div>
@@ -533,6 +603,67 @@ const RequestDetail = () => {
                   }`}
                 >
                   {actionLoading ? 'Processing...' : approvalAction === 'approve' ? 'Approve' : 'Reject'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Receipt Modal */}
+      {showReceiptModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Submit Receipt
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Upload the receipt for this approved purchase request.
+              </p>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Receipt File <span className="text-red-500">*</span>
+                </label>
+                <div className="flex items-center justify-center px-6 py-4 border-2 border-dashed border-gray-300 rounded-md">
+                  <div className="text-center">
+                    <Upload className="mx-auto h-8 w-8 text-gray-400" />
+                    <div className="mt-2">
+                      <label htmlFor="receipt-file" className="cursor-pointer">
+                        <span className="text-sm text-blue-600 hover:text-blue-500">Upload file</span>
+                        <input
+                          id="receipt-file"
+                          type="file"
+                          onChange={handleReceiptFileChange}
+                          className="sr-only"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        />
+                      </label>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">PDF, Word, or Image</p>
+                  </div>
+                </div>
+                {receiptFile && (
+                  <p className="mt-2 text-sm text-green-600 flex items-center">
+                    <FileText className="h-4 w-4 mr-1" />
+                    {receiptFile.name}
+                  </p>
+                )}
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={closeReceiptModal}
+                  disabled={actionLoading}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReceiptSubmit}
+                  disabled={actionLoading || !receiptFile}
+                  className="px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                >
+                  {actionLoading ? 'Uploading...' : 'Submit Receipt'}
                 </button>
               </div>
             </div>
