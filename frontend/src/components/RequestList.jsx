@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { purchaseAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { Calendar, DollarSign, User, Clock, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
+import { Calendar, DollarSign, User, Clock, CheckCircle, XCircle, HelpCircle, ChevronRight } from 'lucide-react';
 
 const RequestList = () => {
   const [requests, setRequests] = useState([]);
@@ -100,7 +101,7 @@ const RequestList = () => {
           <ul className="divide-y divide-gray-200">
             {requests.map((request) => (
               <li key={request.id}>
-                <div className="px-4 py-4 sm:px-6 hover:bg-gray-50">
+                <Link to={`/requests/${request.id}`} className="block px-4 py-4 sm:px-6 hover:bg-gray-50">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       {getStatusIcon(request.status)}
@@ -108,8 +109,9 @@ const RequestList = () => {
                         {request.status_display}
                       </p>
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="flex items-center text-sm text-gray-500">
                       #{request.id}
+                      <ChevronRight className="h-4 w-4 ml-2 text-gray-400" />
                     </div>
                   </div>
                   
@@ -152,7 +154,7 @@ const RequestList = () => {
                       </p>
                     </div>
                   )}
-                </div>
+                </Link>
               </li>
             ))}
           </ul>
