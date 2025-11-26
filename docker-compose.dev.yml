@@ -5,7 +5,7 @@ version: '3.8'
 services:
   # PostgreSQL Database
   db:
-    image: postgres:15-alpine
+    image: postgres:12-alpine
     container_name: procure_db_dev
     restart: unless-stopped
     environment:
